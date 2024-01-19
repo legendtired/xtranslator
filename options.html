@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>插件设置</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.6.0/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <style>
+        body {
+            font-family: Figtree,Noto Sans JP,Noto Sans,Vazirmatn,sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            text-align: center;
+            background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='8' height='8' fill='none' stroke='rgb(0 0 0 / 0.1)'%3e%3cpath d='M0 .5H31.5V32'/%3e%3c/svg%3e");
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 20px 10px;
+        }
+
+        .title {
+            font-size: 3em;
+            font-weight: 900;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+        }
+
+        .form-group label {
+            width: 120px;
+        }
+
+        .mb-4 {
+            margin-bottom: 16px;
+        }
+
+        .bold {
+            font-weight: 700;
+        }
+    </style>
+  </head>
+  <body>
+    
+    <div class="container">
+        <form>
+            <h1 class="title">插件设置</h1>
+
+            <label class="form-control mb-4">
+                <div class="label">
+                  <span class="label-text bold">API 提供商</span>
+                </div>
+                <select class="select select-bordered" id="provider">
+                  <option disabled selected>请选择</option>
+                </select>
+            </label>
+
+            <label class="form-control mb-4">
+                <div class="label">
+                  <span class="label-text bold">API 密钥</span>
+                </div>
+                <input type="text" placeholder="" class="input input-bordered" id="key"/>
+            </label>
+
+            <label class="form-control mb-4">
+                <div class="label">
+                  <span class="label-text bold">API 地址</span>
+                  <span class="label-text-alt">第三方API代理地址，选填</span>
+                </div>
+                <input type="text" placeholder="" class="input input-bordered" id="apiurl"/>
+            </label>
+
+            <label class="form-control mb-4">
+                <div class="label">
+                  <span class="label-text bold">API 模型</span>
+                </div>
+                <select class="select select-bordered" id="model">
+                  <option disabled selected>请选择</option>
+                </select>
+            </label>          
+
+            <button type="submit" class="btn btn-primary">保存设置</button>
+        </form>
+    </div>
+
+    <script type="module" src="options.js"></script>
+        
+  </body>
+</html>

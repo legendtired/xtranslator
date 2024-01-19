@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "X Translator",
+  "description": "Unleash the power of AI to break language barriers on social media. With just a click, X Translator seamlessly integrates advanced artificial intelligence to provide real-time translations of Twitter and YouTube comments. Experience effortless understanding of global perspectives, engage in diverse conversations, and enjoy a more inclusive online community. Install X Translator now and transform your browsing experience with the magic of instant translation.",
+  "version": "1.0",
+  "permissions": ["scripting", "activeTab", "storage"],
+  "icons": {
+    "16": "assets/icon16.png",
+    "48": "assets/icon48.png",    
+    "128": "assets/icon128.png"
+  },
+  "host_permissions": [
+    "*://*.twitter.com/*",
+    "*://*.youtube.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["*://*.twitter.com/*"],
+      "js": ["./content/twitter.js"],
+      "css": ["./content/twitter.css"]
+    },
+    {
+        "matches": ["*://*.youtube.com/*"],
+        "js": ["./content/youtube.js"],
+        "css": ["./content/youtube.css"]
+    }
+  ],  
+  "web_accessible_resources": [
+    {
+      "resources": [ "modules.js" ],
+      "matches": [ "*://*.twitter.com/*", "*://*.youtube.com/*" ]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "action": {
+  }  
+}
