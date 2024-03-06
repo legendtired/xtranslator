@@ -2,7 +2,8 @@ import { configuration } from '/modules.js';
 
 const providers = {
     "openai": "OpenAI",
-    "google": "Google"
+    "google": "Google",
+    "groq": "Groq"
 };
 
 const models = {
@@ -18,12 +19,17 @@ const models = {
     ],
     "google": [
         "gemini-pro",
+    ],
+    "groq": [
+        "mixtral-8x7b-32768",
+        "llama2-70b-4096"
     ]
 };
 
 const apiUrls = {
     "openai": "https://api.openai.com",
-    "google": "https://generativelanguage.googleapis.com"
+    "google": "https://generativelanguage.googleapis.com",
+    "groq": "https://api.groq.com"
 };
 
 const languages = {

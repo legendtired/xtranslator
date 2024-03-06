@@ -1,8 +1,9 @@
 (async () => {
-    const { configuration, OpenAIService, GoogleService } = await import(chrome.runtime.getURL('modules.js'));
+    const { configuration, OpenAIService, GoogleService, GroqService } = await import(chrome.runtime.getURL('modules.js'));
     window.configuration = configuration;
     window.OpenAIService = OpenAIService;
     window.GoogleService = GoogleService;
+    window.GroqService = GroqService;
 })();
 
 let originalTweetNode = null;
@@ -38,7 +39,7 @@ function performTranslation() {
         tweets.push(tweet);
     }
 
-    console.log(JSON.stringify(tweets));
+    //console.log(JSON.stringify(tweets));
     
     tweetNodesForTranslation = [];
 
@@ -72,20 +73,13 @@ function appendTranslationResult(id, text) {
 }
 
 async function translateTweetText(text) {
-    // return new Promise((resolve, reject) => {
-    //     const tweets = JSON.parse(text);
-    //     for (let tweet of tweets) {
-    //         tweet.text = '翻译结果...';
-    //     }
-
-    //     resolve(JSON.stringify(tweets));
-    // });
-
     let translationService = null;
 
     const config = await configuration.load();
     const provider = config.provider;
-    if (provider === 'google') {
+    if (provider === 'groq') {
+        translationService = new GroqService(config);
+    } else if (provider === 'google') {
         translationService = new GoogleService(config);
     } else {
         translationService = new OpenAIService(config);
@@ -128,8 +122,6 @@ function addSingleTweetTranslationButton(tweetNode) {
 }
 
 function observeDOMChanges() {
-    console.log('loaded');
-
     let observer = new MutationObserver((mutations) => {
         isOnTweetPage = window.location.href.indexOf('/status/') > -1;
         if (!isOnTweetPage) {

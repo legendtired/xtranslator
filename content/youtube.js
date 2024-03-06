@@ -1,8 +1,9 @@
 (async () => {
-    const { configuration, OpenAIService, GoogleService } = await import(chrome.runtime.getURL('modules.js'));
+    const { configuration, OpenAIService, GoogleService, GroqService } = await import(chrome.runtime.getURL('modules.js'));
     window.configuration = configuration;
     window.OpenAIService = OpenAIService;
-
+    window.GoogleService = GoogleService;
+    window.GroqService = GroqService;
 })();
 
 let shouldTranslateComments = false;
@@ -31,7 +32,7 @@ function performTranslation() {
         comments.push(comment);
     }
 
-    console.log(JSON.stringify(comments));
+    //console.log(JSON.stringify(comments));
     
     commentNodesForTranslation = [];
 
@@ -53,21 +54,14 @@ function performTranslation() {
 }
 
 async function translateCommentText(text) {
-    // return new Promise((resolve, reject) => {
-    //     const comments = JSON.parse(text);
-    //     for (let comment of comments) {
-    //         comment.text = '翻译结果...';
-    //     }
-
-    //     resolve(JSON.stringify(comments));
-    // });
-
     let translationService = null;
 
     const config = await configuration.load();
     const provider = config.provider;
 
-    if (provider === 'google') {
+    if (provider === 'groq') {
+        translationService = new GroqService(config);
+    } else if (provider === 'google') {
         translationService = new GoogleService(config);
     } else {
         translationService = new OpenAIService(config);
@@ -115,9 +109,7 @@ function observeDOMChanges() {
         for (const mutation of mutations) {
             if (mutation.type === 'childList') {
                 mutation.addedNodes.forEach(node => {
-                    //console.log(node.tagName.toUpperCase());
                     if (node.nodeType === Node.ELEMENT_NODE && node.tagName.toLowerCase() == 'ytd-comments-header-renderer') {
-                        //console.log(node);
                         shouldTranslateComments = false;
                         if (!node.querySelector('.translate-button')) {
                             addBatchTranslationButton(node);
@@ -125,11 +117,7 @@ function observeDOMChanges() {
                     }
 
                     if (node.nodeType === Node.ELEMENT_NODE && (node.tagName.toLowerCase() == 'ytd-comment-renderer' || node.tagName.toLowerCase() == 'ytd-comment-thread-renderer')) {
-                        //console.log(node);
-                        // Math.random().toString(36).substring(2)
-                        
                         if (node.querySelector('.translate-result')) {
-                            console.log('------------');
                             node.querySelector('.translate-result').remove();
                         }
 

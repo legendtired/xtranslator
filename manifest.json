@@ -24,10 +24,10 @@
         "js": ["./content/youtube.js"],
         "css": ["./content/youtube.css"]
     }
-  ],  
+  ],
   "web_accessible_resources": [
     {
-      "resources": [ "modules.js" ],
+      "resources": [ "modules.js", "myProcessor.js" ],
       "matches": [ "*://*.twitter.com/*", "*://*.youtube.com/*" ]
     }
   ],

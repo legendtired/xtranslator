@@ -1,7 +1,7 @@
 .translate-result {
     text-decoration: underline;
-    text-decoration-color: pink; /* 指定下划线颜色为红色 */
-    text-decoration-style: double; /* 指定下划线样式为虚线 */
+    text-decoration-color: pink;
+    text-decoration-style: double;
     margin-top: 10px;
 }
 
@@ -31,16 +31,16 @@
 .translate-button::before {
     content: '';
     display: inline-block;
-    width: 10px; /* 或者你想要的尺寸 */
-    height: 10px; /* 或者你想要的尺寸 */
-    border: 2px solid #f3f3f3; /* 浅色边框 */
-    border-top: 2px solid #3498db; /* 蓝色边框 */
+    width: 10px;
+    height: 10px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #3498db;
     border-radius: 50%;
     margin-right: 5px;
     animation: spin 1s linear infinite;
-    visibility: hidden; /* 初始时不可见 */
+    visibility: hidden;
 }
 
 .translate-button.ct-loading::before {
-    visibility: visible; /* 加载时可见 */
+    visibility: visible;
 }
