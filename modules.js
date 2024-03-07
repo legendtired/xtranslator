@@ -152,7 +152,7 @@ class GroqService
             };
     
             const messages = [
-                {'role': 'system', 'content': 'As a professional translation assistant, please help me translate original posts and comments from Twitter or YouTube into a natural tone. Also, parse the JSON data I provide, translate all text fields into Chinese, and return the JSON data in the same format as the input. Only return the JSON data, without any markdown notation: [{"id": "id", "text": "Translation result..."}, {"id": "id", "text": "Translation result..."}]'},
+                {'role': 'system', 'content': 'As a professional translation assistant, please help me translate original posts and comments from Twitter or YouTube into a natural tone. Also, parse the JSON data I provide, translate all text fields into Chinese, and return the JSON data in the same format as the input. Only return the JSON data, without any markdown notation: [{"id": "id", "text": "Translation result..."}, {"id": "id", "text": "Translation result..."}], Please return the standard JSON format to prevent parsing errors.'},
                 {'role': 'user', 'content': text},
             ];
     
@@ -162,7 +162,7 @@ class GroqService
             }
             
             console.log(apiUrl);
-            
+
             fetch(apiUrl, {
                 method: 'POST',
                 headers: headers,
