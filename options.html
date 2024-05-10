@@ -42,6 +42,14 @@
         .bold {
             font-weight: 700;
         }
+
+        .red {
+            color: red;
+        }
+
+        #notice-key {
+          display: none;
+        }
     </style>
   </head>
   <body>
@@ -64,6 +72,10 @@
                   <span class="label-text bold">API 密钥</span>
                 </div>
                 <input type="text" placeholder="" class="input input-bordered" id="key"/>
+                <div class="label" id="notice-key">
+                  <span class="label-text-alt" style="color: red; text-align: left;">您正在使用内置的 API KEY, 仅用于体验用途，有频率限制，请前往Groq官网申请您自己的<strong>免费API KEY</strong>，然后替换这里的值</span>
+                  <span class="label-text-alt flex-shirk-0"><button id="btn-groq" class="btn">GroqCloud</button></span>
+                </div>                
             </label>
 
             <label class="form-control mb-4">
@@ -71,7 +83,7 @@
                   <span class="label-text bold">API 地址</span>
                   <span class="label-text-alt">第三方API代理地址，选填</span>
                 </div>
-                <input type="text" placeholder="" class="input input-bordered" id="apiurl"/>
+                <input type="text" placeholder="" class="input input-bordered" id="apiurl"/>                
             </label>
 
             <label class="form-control mb-4">

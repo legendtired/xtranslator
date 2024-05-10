@@ -18,11 +18,14 @@ const models = {
         "gpt-4-1106-preview"
     ],
     "google": [
+        "gemini-1.5-pro-latest",
         "gemini-pro",
     ],
     "groq": [
         "mixtral-8x7b-32768",
-        "llama2-70b-4096"
+        "llama3-8b-8192",
+        "llama3-70b-8192",
+        "gemma-7b-it"
     ]
 };
 
@@ -83,7 +86,17 @@ async function load() {
         });
         apiKeyInput.value = '';
         apiUrlInput.value = apiUrls[this.value]
+
+        checkKey();
     });
+
+    apiKeyInput.addEventListener('input', checkKey);
+
+    document.querySelector('#btn-groq').addEventListener('click', function() {
+        window.open('https://console.groq.com/keys');
+    });
+
+    checkKey();
 }
 
 function save(event) {
@@ -104,4 +117,15 @@ function save(event) {
     configuration.save(config).then(() => {
         alert('设置已保存。');
     });
+}
+
+async function checkKey() {
+    const providerSelect = document.querySelector('.select[id="provider"]');
+    const apiKeyInput = document.querySelector('.input[id="key"]');
+
+    if (providerSelect.value === configuration.default.provider && apiKeyInput.value === configuration.default.key) {
+        document.querySelector('#notice-key').style.display = 'flex';
+    } else {
+        document.querySelector('#notice-key').style.display = 'none';
+    }
 }

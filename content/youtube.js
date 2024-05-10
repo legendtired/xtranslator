@@ -1,11 +1,3 @@
-(async () => {
-    const { configuration, OpenAIService, GoogleService, GroqService } = await import(chrome.runtime.getURL('modules.js'));
-    window.configuration = configuration;
-    window.OpenAIService = OpenAIService;
-    window.GoogleService = GoogleService;
-    window.GroqService = GroqService;
-})();
-
 let shouldTranslateComments = false;
 
 let commentNodesForTranslation = [];
@@ -22,7 +14,7 @@ function performTranslation() {
 
     for (let node of commentNodesForTranslation) {
         const id = Math.random().toString(36).substring(2);
-        const contentNode = node.querySelector('ytd-expander yt-formatted-string')
+        const contentNode = node.querySelector('ytd-expander yt-attributed-string')
         contentNode.setAttribute('data-xtid', id);
         const comment = {
             'id': id,
@@ -31,26 +23,15 @@ function performTranslation() {
 
         comments.push(comment);
     }
-
-    //console.log(JSON.stringify(comments));
     
     commentNodesForTranslation = [];
 
-    translateCommentText(JSON.stringify(comments))
-    .then((commentsText) => {
-        console.log(commentsText);
-        const comments = JSON.parse(commentsText);
-        for (let comment of comments) {
-            appendTranslationResult(comment.id, comment.text);
-        }
-    }).catch((error) => {
-        console.log(error);
-    }).finally(() => {
-        const loadingNodes = document.querySelectorAll('.ct-loading');
-        for (let node of loadingNodes) {
-            node.classList.remove('ct-loading');
-        }
-    });
+    let text = '';
+    comments.forEach((comment) => {
+        text += `###${comment.id}\n${comment.text}\n`;
+    });    
+
+    translateCommentText(text)
 }
 
 async function translateCommentText(text) {
@@ -67,19 +48,7 @@ async function translateCommentText(text) {
         translationService = new OpenAIService(config);
     }
     
-    return translationService.translate(text);
-}
-
-function appendTranslationResult(id, text) {
-    const commentNode = document.querySelector('yt-formatted-string[data-xtid="' + id + '"]');
-    if (!commentNode) {
-        return;
-    }
-
-    const translationDiv = document.createElement('div');
-    translationDiv.innerText = text;
-    translationDiv.classList.add('translate-result');
-    commentNode.closest('ytd-expander').appendChild(translationDiv);
+    return translationService.translate(text, chunkCallback, failCallback);
 }
 
 function addBatchTranslationButton(node) {
@@ -87,14 +56,53 @@ function addBatchTranslationButton(node) {
     translateButton.innerText = '翻译评论';
     translateButton.classList.add('translate-button');
     translateButton.classList.add('batch-translate-button');
-    translateButton.addEventListener('click', function(e) {
+    if (shouldTranslateComments) {
+        translateButton.classList.add('ct-auto');
+    }
+
+    translateButton.addEventListener('click', function(e) {        
         shouldTranslateComments = !shouldTranslateComments;
-        e.target.classList.add('ct-loading');
-        commentNodesForTranslation = document.querySelectorAll('ytd-comment-renderer ytd-expander');
+        if (!shouldTranslateComments) {
+            e.target.classList.remove('ct-auto');
+            return;
+        }
+
+        e.target.classList.add('ct-auto');
+
+        commentNodesForTranslation = document.querySelectorAll('ytd-comment-thread-renderer ytd-expander');
+        
         performTranslation();
+        checkConfiguration();
     });
 
     node.querySelector('div[id="title"]').appendChild(translateButton);
+}
+
+function chunkCallback(id, text = '', done = false) {
+
+    if (done) {
+        return;
+    }
+
+    const commentNode = document.querySelector('yt-attributed-string[data-xtid="' + id + '"]');
+    if (!commentNode) {
+        return;
+    }
+
+    let resultNode = commentNode.querySelector('.translate-result');
+    if (!resultNode) {
+        resultNode = document.createElement('div');
+        resultNode.innerText = text;
+        resultNode.classList.add('translate-result');
+        commentNode.appendChild(resultNode);
+    }
+  
+    resultNode.textContent = text
+}
+
+function failCallback(error) {
+    console.error(error);
+    showToast(error.message)
 }
 
 function observeDOMChanges() {

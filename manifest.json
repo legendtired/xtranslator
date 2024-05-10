@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "X Translator",
   "description": "一款轻量的AI翻译插件，可以批量翻译推特的原文和回复以及youtube视频评论，支持 OpenAI、Google Gemini Pro、Groq.",
-  "version": "1.0",
+  "version": "1.2",
   "permissions": ["storage"],
   "icons": {
     "16": "assets/icon16.png",
@@ -16,18 +16,18 @@
   "content_scripts": [
     {
       "matches": ["*://*.twitter.com/*"],
-      "js": ["./content/twitter.js"],
-      "css": ["./content/twitter.css"]
+      "js": ["./content/common.js", "./content/twitter.js"],
+      "css": ["./content/common.css", "./content/twitter.css"]
     },
     {
         "matches": ["*://*.youtube.com/*"],
-        "js": ["./content/youtube.js"],
-        "css": ["./content/youtube.css"]
+        "js": ["./content/common.js", "./content/youtube.js"],
+        "css": ["./content/common.css", "./content/youtube.css"]
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": [ "modules.js"],
+      "resources": [ "modules.js", "assets/icon128.png"],
       "matches": [ "*://*.twitter.com/*", "*://*.youtube.com/*" ]
     }
   ],

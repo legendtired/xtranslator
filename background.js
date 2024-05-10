@@ -7,3 +7,9 @@ chrome.runtime.onInstalled.addListener(details => {
 chrome.action.onClicked.addListener((tab) => {
   chrome.runtime.openOptionsPage()
 });
+
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+  if (request.action == "openOptionsPage") {
+      chrome.runtime.openOptionsPage();
+  }
+});

@@ -4,15 +4,14 @@ class Configuration
 {
     storageKey = 'UserConfig';
     default = {
-        provider: 'openai',
-        model: 'gpt-3.5-turbo',
-        key: '',
-        url: 'https://api.openai.com/v1/chat/completions',
+        provider: 'groq',
+        model: 'llama3-8b-8192',
+        key: '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',
+        url: 'https://api.groq.com',
         lang: 'chinese'
     }
 
     load() {
-        console.log(this.storageKey);
         return new Promise((resolve) => {
             chrome.storage.local.get(this.storageKey, data => {
                 const config = data[this.storageKey] || this.default;
@@ -36,149 +35,307 @@ class Configuration
     }
 }
 
-class OpenAIService
-{
+class Service {
     config = null;
+    prompt = "作为一个专业的翻译助理，请帮我将推文或youtube评论翻译成中文，尽量使用自然的语气。我将提供给你这种格式的数据：\n###随机字符串1\nText to be translated 1\n###随机字符串2\nText to be translated 2\n...\n请返回同样的格式，不要添加你的评论或任何markdown标记：\n###随机字符串1\n翻译后的文本1\n###随机字符串2\n翻译后的文本2\n...";
+    curChunkId = "";
+    curLine = "";
+    curText = "";
+
+    chunkCallback = null;
+    failCallback = null;
 
     constructor(config) {
         this.config = config;
     }
 
-    translate(text) {
-        return new Promise((resolve, reject) => {
-            const apiUrl = `${this.config.url}/v1/chat/completions`;
-            const key = this.config.key;
-            const lang = this.config.lang;
-    
-            const headers = {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer '+ key
-            };
-    
-            const messages = [
-                {'role': 'system', 'content': 'As a professional translation assistant, please help me translate original posts and comments from Twitter or YouTube into a natural tone. Also, parse the JSON data I provide, translate all text fields into Chinese, and return the JSON data in the same format as the input. Only return the JSON data, without any markdown notation: [{"id": "id", "text": "Translation result..."}, {"id": "id", "text": "Translation result..."}]'},
-                {'role': 'user', 'content': text},
-            ];
-    
-            const data = {
-                'model': this.config.model,
-                'messages': messages,
+    callback(chars, done = false)
+    {
+        if (done) {
+            this.chunkCallback('', '', true);
+            return;
+        }
+
+        if (chars === "") {
+            return;
+        }
+
+        if (chars === "\n") {
+            const m = this.curLine.match(/^###(\S+)$/);
+            if (m) {
+                this.curChunkId = m[1];
+                this.curText = "";
+            } else {
+                if (this.curLine.startsWith("#")) {
+                    this.curText += this.curLine;
+                }
+
+                this.curText += "\n";
+                this.chunkCallback(this.curChunkId, this.curText);
             }
-            
-            fetch(apiUrl, {
-                method: 'POST',
-                headers: headers,
-                body: JSON.stringify(data)
-            }).then((response) => {
-                console.log(response);
-                return response.json();
-            }).then((data) => {
-                console.log(data);
-                const translatedText = data['choices'][0]['message']['content'];
-                resolve(translatedText);
-            }).catch((error) => {
-                console.log(error);
-                reject(error);
-            })
-        });
-    }
-}
 
+            this.curLine = "";
+        } else {
+            this.curLine += chars;
 
-class GoogleService
-{
-    config = null;
-
-    constructor(config) {
-        this.config = config;
+            if (!this.curLine.startsWith("#")) {
+                this.curText += chars;
+                this.chunkCallback(this.curChunkId, this.curText);
+            }
+        }
     }
 
-    translate(text) {
-        return new Promise((resolve, reject) => {
-            const apiUrl = `${this.config.url}/v1beta/models/${this.config.model}:generateContent?key=${this.config.key}`;            
-            const lang = this.config.lang;
+    async readOpenAiLikeStream(stream) {
+
+        const reader = stream.getReader();
     
-            const headers = {
-                'Content-Type': 'application/json'
-            };
+        while (true) {
+            const {value, done} = await reader.read();
+            if (done) break;
             
-            const data = {
-                "contents": [
-                    {
-                        "parts": [
-                            {
-                                "text": 'As a professional translation assistant, please help me translate original posts and comments from Twitter or YouTube into a natural tone. Also, parse the JSON data I provide, translate all text fields into Chinese, and return the JSON data in the same format as the input. Only return the JSON data, without any markdown notation, output sample: [{"id": "id", "text": "Translation result..."}, {"id": "id", "text": "Translation result..."}]\ninput: ' + text
-                            }
-                        ]
+            const chunk = new TextDecoder().decode(value);
+            const lines = chunk.split('\n').filter(line => line.trim() !== '');
+            for (const line of lines) {
+                const message = line.replace(/^data: /, '');
+                if (message === '[DONE]') {
+                    this.callback("", true);
+                    break; // Stream finished
+                }
+                
+                let parsed = null;
+                try {
+                    parsed = JSON.parse(message);
+                } catch (error) {
+                    console.error('Error parsing JSON:', error);
+                    continue;
+                }
+                
+                let content = undefined
+                if (parsed.choices !== undefined) {
+                    content = parsed.choices[0].delta.content;
+                } else if (parsed.candidates !== undefined) {
+                    content = parsed.candidates[0].content.parts[0].text
+                }            
+                if (content !== undefined) {
+                    const parts = this.splitContent(content);
+                    for (const part of parts) {
+                        this.callback(part);
                     }
-                ]
+                } 
             }
-            
-            fetch(apiUrl, {
-                method: 'POST',
-                headers: headers,
-                body: JSON.stringify(data)
-            }).then((response) => {
-                console.log(response);
-                return response.json();
-            }).then((data) => {
-                const translatedText = data['candidates'][0]['content']['parts'][0]['text'];
-                resolve(translatedText);
-            }).catch((error) => {
-                console.log(error);
-                reject(error);
-            })
-        });
+        }
+    }
+
+    async readGoogleStream(stream) {
+        const reader = stream.getReader();
+
+        while (true) {
+            const {value, done} = await reader.read();
+            if (done) break;
+
+            let chunk = new TextDecoder().decode(value);
+            if (chunk.startsWith('[')) {
+                chunk = chunk.substring(1);
+            }
+
+            if (chunk.startsWith(',')) {
+                chunk = chunk.substring(1);
+            }
+
+            const endOfStream = chunk.endsWith(']');
+            if (endOfStream) {
+                chunk = chunk.substring(0, chunk.length - 1);
+                if (chunk === '') {
+                    this.callback("", true);
+                    break;
+                }
+            }
+
+            let parsed = null;
+            try {
+                parsed = JSON.parse(chunk);
+            } catch (error) {
+                console.error('Error parsing JSON:', error);
+                continue;
+            }
+
+            let content = undefined
+            if (parsed.candidates[0].content) {
+                content = parsed.candidates[0].content.parts[0].text
+            }
+            if (content !== undefined) {
+                const parts = this.splitContent(content);
+                for (const part of parts) {
+                    this.callback(part);
+                }
+            }
+
+            if (endOfStream) {
+                this.callback("", true);
+                break;
+            }
+        }
+
+        //
+    }
+
+    splitContent(str) {
+        let result = [];
+        let parts = str.split(/\n/);
+        for (let i = 0; i < parts.length; i++) {
+            if (i !== 0) {
+                result.push('\n');
+            }
+            result.push(parts[i]);
+        }
+    
+        return result;
     }
 }
 
-class GroqService
+class OpenAIService extends Service
 {
-    config = null;
 
-    constructor(config) {
-        this.config = config;
-    }
+    translate(text, chunkCallback, failCallback = null) {
+        this.chunkCallback = chunkCallback;
+        this.failCallback = failCallback;
 
-    translate(text) {
-        return new Promise((resolve, reject) => {
-            const apiUrl = `${this.config.url}/openai/v1/chat/completions`;
-            const key = this.config.key;
-            const lang = this.config.lang;
-    
-            const headers = {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer '+ key
-            };
-    
-            const messages = [
-                {'role': 'system', 'content': 'As a professional translation assistant, please help me translate original posts and comments from Twitter or YouTube into a natural tone. Also, parse the JSON data I provide, translate all text fields into Chinese, and return the JSON data in the same format as the input. Only return the JSON data, without any markdown notation: [{"id": "id", "text": "Translation result..."}, {"id": "id", "text": "Translation result..."}], Please return the standard JSON format to prevent parsing errors.'},
-                {'role': 'user', 'content': text},
-            ];
-    
-            const data = {
-                'model': this.config.model,
-                'messages': messages,
+        const apiUrl = `${this.config.url}/v1/chat/completions`;
+        const key = this.config.key;
+        const lang = this.config.lang;
+
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer '+ key
+        };
+
+        const messages = [
+            {'role': 'system', 'content': this.prompt},
+            {'role': 'user', 'content': text},
+        ];
+
+        const data = {
+            'model': this.config.model,
+            'stream': true,
+            'messages': messages,
+        }
+
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(data)
+        }).then((response) => {                
+            if (!response.ok) {
+                this.failCallback(new Error('HTTP Error, Code: ' + response.status));
+                return
             }
             
-            console.log(apiUrl);
+            return response.body;
+        })
+        .then((stream) => {
+            this.readOpenAiLikeStream(stream);
+        })
+        .catch((error) => {
+            console.error(error);
+            this.failCallback(error);
+        })
+    }
+}
 
-            fetch(apiUrl, {
-                method: 'POST',
-                headers: headers,
-                body: JSON.stringify(data)
-            }).then((response) => {
-                console.log(response);
-                return response.json();
-            }).then((data) => {
-                console.log(data);
-                const translatedText = data['choices'][0]['message']['content'];
-                resolve(translatedText);
-            }).catch((error) => {
-                console.log(error);
-                reject(error);
-            })
-        });
+
+class GoogleService extends Service
+{
+    translate(text, chunkCallback, failCallback = null) {
+        this.chunkCallback = chunkCallback;
+        this.failCallback = failCallback;
+
+        const apiUrl = `${this.config.url}/v1beta/models/${this.config.model}:streamGenerateContent?key=${this.config.key}`;            
+        const lang = this.config.lang;
+
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        const data = {
+            "contents": [
+                {
+                    "parts": [
+                        {
+                            "text": this.prompt + '\n原数据: ' + text
+                        }
+                    ]
+                }
+            ]
+        }
+        
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(data)
+        }).then((response) => {                
+            if (!response.ok) {
+                throw new Error('HTTP Error, Code: ' + response.status);
+                //this.failCallback(new Error('HTTP Error, Code: ' + response.status));
+                return
+            }
+            
+            return response.body;
+        })
+        .then((stream) => {
+            this.readGoogleStream(stream);
+        })
+        .catch((error) => {
+            console.error(error);
+            this.failCallback(error);
+        })
+    }
+}
+
+class GroqService extends Service
+{
+    translate(text, chunkCallback, failCallback = null) {
+        this.chunkCallback = chunkCallback;
+        this.failCallback = failCallback;
+
+        const apiUrl = `${this.config.url}/openai/v1/chat/completions`;
+        const key = this.config.key;
+        const lang = this.config.lang;
+
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer '+ key
+        };
+
+        const messages = [
+            {'role': 'system', 'content': this.prompt},
+            {'role': 'user', 'content': text},
+        ];
+
+        const data = {
+            'model': this.config.model,
+            'stream': true,
+            'messages': messages,
+        }
+
+        fetch(apiUrl, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(data)
+        }).then((response) => {                
+            if (!response.ok) {
+                this.failCallback(new Error('HTTP Error, Code: ' + response.status));
+                return
+            }
+            
+            return response.body;
+        })
+        .then((stream) => {
+            this.readOpenAiLikeStream(stream);
+        })
+        .catch((error) => {
+            console.error(error);
+            this.failCallback(error);
+        })
     }
 }
 
