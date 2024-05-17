@@ -37,7 +37,8 @@ class Configuration
 
 class Service {
     config = null;
-    prompt = "作为一个专业的翻译助理，请帮我将推文或youtube评论翻译成中文，尽量使用自然的语气。我将提供给你这种格式的数据：\n###随机字符串1\nText to be translated 1\n###随机字符串2\nText to be translated 2\n...\n请返回同样的格式，不要添加你的评论或任何markdown标记：\n###随机字符串1\n翻译后的文本1\n###随机字符串2\n翻译后的文本2\n...";
+    //要求分成三个步骤：直译、反思、意译，
+    prompt = "作为一个专业的翻译助理，请帮我将推文或youtube评论翻译成中文，要求结果通俗易懂，并保留原有格式。我将提供给你这种格式的数据：\n###随机字符串1\nText to be translated 1\n###随机字符串2\nText to be translated 2\n...\n请返回同样的格式，不要添加你的评论或任何markdown标记：\n###随机字符串1\n翻译后的文本1\n###随机字符串2\n翻译后的文本2\n...";
     curChunkId = "";
     curLine = "";
     curText = "";

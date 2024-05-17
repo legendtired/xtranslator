@@ -130,7 +130,7 @@ function addSingleTweetTranslationButton(tweetNode) {
         checkConfiguration();
     });
 
-    const caretNode = tweetNode.querySelector('div[data-testid="caret"]');
+    const caretNode = tweetNode.querySelector('button[data-testid="caret"]');
     if (caretNode && caretNode.parentElement.querySelector('.translate-button') === null) {
         caretNode.parentElement.prepend(translateButton);
     }
@@ -162,7 +162,7 @@ function observeDOMChanges() {
                         if (!isOnTweetPage && node.querySelector('article[tabindex="0"]')) {
                             addSingleTweetTranslationButton(node);
                         }
-                    } else if (!isOnTweetPage && node.querySelector('div[data-testid="caret"]') && node.closest('article[tabindex="0"]')) {
+                    } else if (!isOnTweetPage && node.querySelector('button[data-testid="caret"]') && node.closest('article[tabindex="0"]')) {
                         addSingleTweetTranslationButton(node);
                     }
                 });
