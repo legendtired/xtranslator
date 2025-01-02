@@ -1,105 +1,183 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>插件设置</title>
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.6.0/dist/full.min.css" rel="stylesheet" type="text/css" />
-    <style>
-        body {
-            font-family: Figtree,Noto Sans JP,Noto Sans,Vazirmatn,sans-serif;
-            margin: 0;
-            padding: 0;
-            height: 100vh;
-            text-align: center;
-            background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='8' height='8' fill='none' stroke='rgb(0 0 0 / 0.1)'%3e%3cpath d='M0 .5H31.5V32'/%3e%3c/svg%3e");
-        }
-
-        .container {
-            max-width: 480px;
-            margin: 0 auto;
-            padding: 20px 10px;
-        }
-
-        .title {
-            font-size: 3em;
-            font-weight: 900;
-            margin-bottom: 20px;
-        }
-
-        .form-group {
-            display: flex;
-            align-items: center;
-            margin: 10px 0;
-        }
-
-        .form-group label {
-            width: 120px;
-        }
-
-        .mb-4 {
-            margin-bottom: 16px;
-        }
-
-        .bold {
-            font-weight: 700;
-        }
-
-        .red {
-            color: red;
-        }
-
-        #notice-key {
-          display: none;
-        }
-    </style>
-  </head>
-  <body>
+<head>
+  <meta charset="UTF-8">
+  <title>Setting</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.6.0/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.tailwind-lite.com/1.0.2.css" />
+  <style>
+    body {
+      font-family: Figtree, Noto Sans JP, Noto Sans, Vazirmatn, sans-serif;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      text-align: center;
+      background-image:url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='8' height='8' fill='none' stroke='rgb(0 0 0 / 0.1)'%3e%3cpath d='M0 .5H31.5V32'/%3e%3c/svg%3e");
+      font-size: 1em;
+    }
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px 10px;      
+    }
     
-    <div class="container">
-        <form>
-            <h1 class="title">插件设置</h1>
+    .title {
+      font-size: 2em;
+      font-weight: 900;
+      margin-bottom: 20px;
+    }
 
-            <label class="form-control mb-4">
-                <div class="label">
-                  <span class="label-text bold">API 提供商</span>
-                </div>
-                <select class="select select-bordered" id="provider">
-                  <option disabled selected>请选择</option>
-                </select>
-            </label>
 
-            <label class="form-control mb-4">
-                <div class="label">
-                  <span class="label-text bold">API 密钥</span>
-                </div>
-                <input type="text" placeholder="" class="input input-bordered" id="key"/>
-                <div class="label" id="notice-key">
-                  <span class="label-text-alt" style="color: red; text-align: left;">您正在使用内置的 API KEY, 仅用于体验用途，有频率限制，请前往Groq官网申请您自己的<strong>免费API KEY</strong>，然后替换这里的值</span>
-                  <span class="label-text-alt flex-shirk-0"><button id="btn-groq" class="btn">GroqCloud</button></span>
-                </div>                
-            </label>
+    .main-transition, .page-transition {
+      transition: all 0.3s;
+      opacity: 1;
+      transform: translateX(0);
+    }
 
-            <label class="form-control mb-4">
-                <div class="label">
-                  <span class="label-text bold">API 地址</span>
-                  <span class="label-text-alt">第三方API代理地址，选填</span>
-                </div>
-                <input type="text" placeholder="" class="input input-bordered" id="apiurl"/>                
-            </label>
+    .main-enter, .main-leave {
+      opacity: 0;
+      transform: translateX(-50%);
+    }
 
-            <label class="form-control mb-4">
-                <div class="label">
-                  <span class="label-text bold">API 模型</span>
-                </div>
-                <select class="select select-bordered" id="model">
-                  <option disabled selected>请选择</option>
-                </select>
-            </label>          
+    .page-enter, .page-leave {
+      opacity: 0;
+      transform: translateX(50%);
+    }
 
-            <button type="submit" class="btn btn-primary">保存设置</button>
-        </form>
+    .config-row:hover .btn {
+      visibility: visible;
+    }
+
+    a {
+      text-decoration: underline;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="container flex flex-col relative" v-scope="appScope">
+    <h1 class="title">{{ 'settings' | t}}</h1>
+    
+    <div v-if="!editing" transition="main" class="mt-4 flex flex-col absolute top-20 left-0 right-0">
+
+      <div v-if="config.configs.length == 0" class="flex flex-col items-start gap-2 mb-2 p-4 rounded-lg " style="background-color: #f9d949;">
+        <p class="text-sm text-left" style="line-height: 160%;">{{{ 'zero-config-tips' | t }}}</p>
+        <button class="btn btn-neutral btn-sm mt-2" @click="new">{{ 'new-config' | t }}</button>
+      </div>
+      <block v-else>
+      <h3 class=" mb-2 text-sm flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class=" h-5 w-1" style="background-color: #f9d949;"></div>
+          <span>{{ 'switch-conf' | t }}
+          </span>
+        </div>
+        <button class="btn btn-neutral btn-sm" @click="new">{{ 'new' | t }}</button>
+      </h3>
+      
+      <div v-for="cfg in config.configs" @click="select($index)" class="flex items-center p-4 bg-gray-100 hover:bg-gray-200 gap-2 rounded-lg mb-2 config-row cursor-pointer">
+        <div class="flex flex-col gap-1">
+          <div class="flex items-center gap-2">
+            <span class=" font-bold">{{ cfg.model }}</span>
+            <div v-if="cfg.active && cfg.trial" class="badge text-xs badge-secondary">{{'trial' | t}}</div>
+            <div v-if="cfg.active" class="badge text-xs" style="background-color: #f9d949;">{{'active' | t}}</div>            
+          </div>
+          <span class="text-xs text-gray-500">{{ cfg.apiUrl }}</span>
+        </div>                
+        <div class="flex-grow"></div>
+        <button class="btn btn-sm btn-neutral invisible" @click="edit($index)">{{'edit' | t}}</button>
+      </div>
+      </block>
+
+      <!-- 目标语言 -->
+      <div class="form-control mt-4">
+        <label class="label">
+          <span class="label-text">{{ 'target-language' | t }}</span>
+        </label>
+        <select class="select select-bordered" v-model="config.lang">
+          <option disabled value="">{{ 'please-select' | t }}</option>
+          <option value="chinese">中文</option>
+          <option value="english">English</option>
+          <option value="japanese">日本語</option>
+          <option value="korean">한국어</option>
+          <option value="french">Français</option>
+          <option value="spanish">Español</option>
+          <option value="german">Deutsch</option>
+          <option value="arabic">العربية</option>
+          <option value="russian">Русский</option>
+        </select>
+      </div>
+
+      <!-- 操作按钮 -->
+      <div class="mt-4">
+        <button class="btn btn-neutral mr-2" @click="save">{{ 'save-all' | t}}</button>
+        <!-- <button class="btn btn-secondary mr-2" @click="newConfig">新建配置</button>
+        <button class="btn btn-error" @click="deleteConfig" v-if="activeConfigName">删除当前配置</button> -->
+      </div>
     </div>
 
-    <script type="module" src="options.js"></script>
-        
-  </body>
+
+    <div v-if="editing" transition="page" class="flex flex-col absolute top-20 left-0 right-0">
+
+      <!-- API类型 -->
+      <div class="form-control mb-4">
+        <label class="label">
+          <span class="label-text">{{ 'api-type' | t }}</span>
+        </label>
+        <select class="select select-bordered" v-model="currentConfig.apiType">
+          <option disabled value="">{{ 'please-select' | t }}</option>
+          <option value="openai">{{ 'openai-or-openai-compatible' | t }}</option>
+          <option value="google">Google</option>
+        </select>
+      </div>
+
+      <!-- API地址 -->
+      <div v-if="currentConfig.apiType != 'google'" class="form-control mb-4 relative">
+        <label class="label">
+          <span class="label-text">{{ 'full-api-url' | t }}</span>
+        </label>
+        <dropdown-input
+          :value="currentConfig.apiUrl"
+          :options="apiUrlOptions"
+          :placeholder="$t('api-url-placeholder')"
+          @changed="apiUrlInputChanged"
+        ></dropdown-input>
+      </div>
+
+      <!-- API Key -->
+      <div class="form-control mb-4">
+        <label class="label">
+          <span class="label-text">API Key</span>
+        </label>
+        <input type="text" class="input input-bordered" v-model="currentConfig.apiKey" placeholder="sk-...">
+      </div>
+
+      <!-- 模型 -->
+      <div class="form-control mb-4">
+        <label class="label">
+          <span class="label-text">{{ 'model' | t }}</span>
+        </label>
+        <dropdown-input
+          :value="currentConfig.model"
+          :options="modelOptions"
+          :placeholder="$t('model-placeholder')"
+          @changed="modelInputChanged"
+        ></dropdown-input>
+      </div>
+
+      <div class="mt-4">
+        <button class="btn" @click="cancel">{{'cancel' | t}}</button>
+        <button class="btn btn-error ml-2" @click="delete">{{ 'delete' | t}}</button>
+        <button class="btn btn-neutral ml-2" @click="saveConfig">{{ 'save' | t}}</button>        
+      </div>
+
+    </div>
+
+
+  </div>
+
+  <script src="./vue.js"></script>
+  <script type="module" src="./i18n.js"></script>
+  <script src="./options.js" type="module"></script>
+  
+</body>
 </html>

@@ -1,15 +1,19 @@
 (async () => {
-    const { configuration, OpenAIService, GoogleService, GroqService } = await import(chrome.runtime.getURL('modules.js'));
+    const { $t } = await import(chrome.runtime.getURL('i18n.js'));
+    window.$t = $t;
+})();
+
+(async () => {
+    const { configuration, OpenAIService, GoogleService } = await import(chrome.runtime.getURL('modules.js'));
     window.configuration = configuration;
     window.OpenAIService = OpenAIService;
     window.GoogleService = GoogleService;
-    window.GroqService = GroqService;
 })();
 
 async function checkConfiguration() {
     const config = await configuration.load();
-    if (config.provider === configuration.default.provider && config.key === configuration.default.key) {
-        showToast('您正在使用内置的Groq API KEY, 仅用于体验用途，有频率限制，请前往Groq官网申请您自己的免费API KEY，然后在插件设置中替换。', 5000, { text: '了解更多', handler: () => chrome.runtime.sendMessage({action: "openOptionsPage"}) });
+    if (config.configs.length == 0) {
+        showToast( $t('zero-config-warning'), 5000, { text: $t('extension-settings'), handler: () => chrome.runtime.sendMessage({action: "openOptionsPage"}) });
     }
 }
 

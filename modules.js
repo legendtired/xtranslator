@@ -4,17 +4,23 @@ class Configuration
 {
     storageKey = 'UserConfig';
     default = {
-        provider: 'groq',
-        model: 'llama3-8b-8192',
-        key: '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',
-        url: 'https://api.groq.com',
-        lang: 'chinese'
+        configs: [],
+        lang: '-'
     }
 
     load() {
         return new Promise((resolve) => {
             chrome.storage.local.get(this.storageKey, data => {
-                const config = data[this.storageKey] || this.default;
+                let config = data[this.storageKey] || this.default;
+                if (!config.configs) {
+                    config = this.migrate(config);
+                }
+
+                let activeConfig = config.configs.find(cfg => cfg.active);
+                if (activeConfig) {
+                    config = { ...config, ...activeConfig };
+                }
+
                 resolve(config);
             });
         });
@@ -23,7 +29,10 @@ class Configuration
     save(config) {
         return new Promise((resolve) => {
             chrome.storage.local.set({
-                [this.storageKey]: config
+                [this.storageKey]: {
+                    configs: config.configs,
+                    lang: config.lang
+                }
             }, resolve);
         });
     }
@@ -33,12 +42,41 @@ class Configuration
             chrome.storage.local.remove(this.storageKey, resolve);
         });
     }
+
+    migrate(oldConfig) {
+        if (oldConfig.key == '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') {
+            return this.default;
+        }
+
+        let apiType = 'openai';
+        let apiUrl = '';
+        if (oldConfig.provider === 'groq' || oldConfig.provider === 'openai') {
+            apiUrl = oldConfig.url + '/openai/v1/chat/completions';
+        } else {
+            apiType = 'google';
+        }
+
+        let conf = {
+            apiType: apiType,
+            apiUrl: apiUrl,
+            apiKey: oldConfig.key,
+            model: oldConfig.model,
+            active: true
+        }
+
+        let newConfig = {
+            configs: [conf],
+            lang: '-'
+        }
+
+        return newConfig;
+    }
 }
 
 class Service {
     config = null;
-    //要求分成三个步骤：直译、反思、意译，
-    prompt = "作为一个专业的翻译助理，请帮我将推文或youtube评论翻译成中文，要求结果通俗易懂，并保留原有格式。我将提供给你这种格式的数据：\n###随机字符串1\nText to be translated 1\n###随机字符串2\nText to be translated 2\n...\n请返回同样的格式，不要添加你的评论或任何markdown标记：\n###随机字符串1\n翻译后的文本1\n###随机字符串2\n翻译后的文本2\n...";
+    //prompt = "作为一个专业的翻译助理，请帮我将推文或youtube评论翻译成中文，要求结果通俗易懂，并保留原有格式。我将提供给你这种格式的数据：\n###随机字符串1\nText to be translated 1\n###随机字符串2\nText to be translated 2\n...\n请返回同样的格式，不要添加你的评论或任何markdown标记：\n###随机字符串1\n翻译后的文本1\n###随机字符串2\n翻译后的文本2\n...";
+    prompt = "As a professional translation assistant, please help me translate tweets or YouTube comments into {{lang}} in a way that's easy to understand and preserves the original format. I will provide data in this format:\n###randomString1\nText to be translated 1\n###randomString2\nText to be translated 2\n...\nPlease return the same format without adding your own comments or any markdown:\n###randomString1\nTranslated text 1\n###randomString2\nTranslated text 2\n..."; 
     curChunkId = "";
     curLine = "";
     curText = "";
@@ -48,6 +86,7 @@ class Service {
 
     constructor(config) {
         this.config = config;
+        this.prompt = this.prompt.replace('{{lang}}', this.config.lang);
     }
 
     callback(chars, done = false)
@@ -201,13 +240,12 @@ class OpenAIService extends Service
         this.chunkCallback = chunkCallback;
         this.failCallback = failCallback;
 
-        const apiUrl = `${this.config.url}/v1/chat/completions`;
-        const key = this.config.key;
+        const apiUrl = this.config.apiUrl;
         const lang = this.config.lang;
 
         const headers = {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer '+ key
+            'Authorization': 'Bearer '+ this.config.apiKey
         };
 
         const messages = [
@@ -250,7 +288,7 @@ class GoogleService extends Service
         this.chunkCallback = chunkCallback;
         this.failCallback = failCallback;
 
-        const apiUrl = `${this.config.url}/v1beta/models/${this.config.model}:streamGenerateContent?key=${this.config.key}`;            
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${this.config.model}:streamGenerateContent?key=${this.config.apiKey}`;
         const lang = this.config.lang;
 
         const headers = {
@@ -292,54 +330,6 @@ class GoogleService extends Service
     }
 }
 
-class GroqService extends Service
-{
-    translate(text, chunkCallback, failCallback = null) {
-        this.chunkCallback = chunkCallback;
-        this.failCallback = failCallback;
-
-        const apiUrl = `${this.config.url}/openai/v1/chat/completions`;
-        const key = this.config.key;
-        const lang = this.config.lang;
-
-        const headers = {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer '+ key
-        };
-
-        const messages = [
-            {'role': 'system', 'content': this.prompt},
-            {'role': 'user', 'content': text},
-        ];
-
-        const data = {
-            'model': this.config.model,
-            'stream': true,
-            'messages': messages,
-        }
-
-        fetch(apiUrl, {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify(data)
-        }).then((response) => {                
-            if (!response.ok) {
-                this.failCallback(new Error('HTTP Error, Code: ' + response.status));
-                return
-            }
-            
-            return response.body;
-        })
-        .then((stream) => {
-            this.readOpenAiLikeStream(stream);
-        })
-        .catch((error) => {
-            console.error(error);
-            this.failCallback(error);
-        })
-    }
-}
-
 const configuration = new Configuration();
 
-export { configuration, OpenAIService, GoogleService, GroqService }
+export { configuration, OpenAIService, GoogleService }

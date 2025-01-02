@@ -28,7 +28,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": [ "modules.js", "assets/icon128.png"],
+      "resources": [ "modules.js", "i18n.js", "assets/icon128.png"],
       "matches": [ "*://*.twitter.com/*", "*://*.x.com/*", "*://*.youtube.com/*" ]
     }
   ],

@@ -38,11 +38,12 @@ async function translateCommentText(text) {
     let translationService = null;
 
     const config = await configuration.load();
-    const provider = config.provider;
+    if (config.configs.length == 0) {
+        return;
+    }
 
-    if (provider === 'groq') {
-        translationService = new GroqService(config);
-    } else if (provider === 'google') {
+    const apiType = config.apiType;
+    if (apiType === 'google') {
         translationService = new GoogleService(config);
     } else {
         translationService = new OpenAIService(config);
@@ -53,7 +54,7 @@ async function translateCommentText(text) {
 
 function addBatchTranslationButton(node) {
     let translateButton = document.createElement('a');
-    translateButton.innerText = '翻译评论';
+    translateButton.innerText = $t('y-batch-translate');
     translateButton.classList.add('translate-button');
     translateButton.classList.add('batch-translate-button');
     if (shouldTranslateComments) {

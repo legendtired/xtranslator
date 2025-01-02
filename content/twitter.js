@@ -43,10 +43,12 @@ async function translateTweetText(text) {
     let translationService = null;
 
     const config = await configuration.load();
-    const provider = config.provider;
-    if (provider === 'groq') {
-        translationService = new GroqService(config);
-    } else if (provider === 'google') {
+    if (config.configs.length == 0) {
+        return;
+    }
+
+    const apiType = config.apiType;
+    if (apiType === 'google') {
         translationService = new GoogleService(config);
     } else {
         translationService = new OpenAIService(config);
@@ -93,7 +95,7 @@ function removeLoadingIndicator() {
 
 function addBatchTranslationButton() {
     let translateButton = document.createElement('a');
-    translateButton.innerText = '翻译推文及评论';
+    translateButton.innerText = window.$t('x-batch-translate');
     translateButton.classList.add('translate-button');
     translateButton.classList.add('batch-translate-button');
     if (shouldTranslateReplies) {
@@ -119,7 +121,7 @@ function addBatchTranslationButton() {
 
 function addSingleTweetTranslationButton(tweetNode) {
     let translateButton = document.createElement('a');
-    translateButton.innerText = '翻译';
+    translateButton.innerText = window.$t('translate');
     translateButton.classList.add('translate-button');
     translateButton.classList.add('tweet-translate-button');
     translateButton.addEventListener('click', function(e) {
