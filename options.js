@@ -1,4 +1,5 @@
 import { configuration } from '/modules.js';
+import { $t } from '/i18n.js';
 
 var vueOpts = {
     el: "#app",
